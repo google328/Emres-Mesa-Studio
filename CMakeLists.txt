@@ -3,12 +3,7 @@ project(BoogieStudioPreamp VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 
-include(FetchContent)
-FetchContent_Declare(
-    JUCE
-    URL https://github.com
-)
-FetchContent_MakeAvailable(JUCE)
+add_subdirectory(JUCE)
 
 juce_add_plugin(BoogieStudioPreamp
     COMPANY_NAME "CustomAudio"
