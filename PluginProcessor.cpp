@@ -66,19 +66,25 @@ void StudioPreampAudioProcessor::releaseResources() {}
 
 void StudioPreampAudioProcessor::updateFilters()
 {
-    float bassDb   = *apvts.getRawParameterValue ("BASS");
-    float midDb    = *apvts.getRawParameterValue ("MID");
-    float trebleDb = *apvts.getRawParameterValue ("TREBLE");
+    float bassDb   = apvts.getRawParameterValue ("BASS")->load();
+    float midDb    = apvts.getRawParameterValue ("MID")->load();
+    float trebleDb = apvts.getRawParameterValue ("TREBLE")->load();
 
     *preBassFilter.state   = *juce::dsp::IIR::Coefficients<float>::makeLowShelf  (currentSampleRate, 120.0f, 0.7f, juce::Decibels::decibelsToGain (bassDb));
     *preMidFilter.state    = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(currentSampleRate, 450.0f, 0.8f, juce::Decibels::decibelsToGain (midDb));
     *preTrebleFilter.state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf (currentSampleRate, 2000.0f, 0.7f, juce::Decibels::decibelsToGain (trebleDb));
 
-    *geq80.state   = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 80.0f,   1.4f, juce::Decibels::decibelsToGain (*apvts.getRawParameterValue ("GEQ_80")));
-    *geq240.state  = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 240.0f,  1.4f, juce::Decibels::decibelsToGain (*apvts.getRawParameterValue ("GEQ_240")));
-    *geq750.state  = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 750.0f,  1.6f, juce::Decibels::decibelsToGain (*apvts.getRawParameterValue ("GEQ_750")));
-    *geq2200.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 2200.0f, 1.4f, juce::Decibels::decibelsToGain (*apvts.getRawParameterValue ("GEQ_2200")));
-    *geq6600.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 6600.0f, 1.2f, juce::Decibels::decibelsToGain (*apvts.getRawParameterValue ("GEQ_6600")));
+    float g80   = apvts.getRawParameterValue ("GEQ_80")->load();
+    float g240  = apvts.getRawParameterValue ("GEQ_240")->load();
+    float g750  = apvts.getRawParameterValue ("GEQ_750")->load();
+    float g2200 = apvts.getRawParameterValue ("GEQ_2200")->load();
+    float g6600 = apvts.getRawParameterValue ("GEQ_6600")->load();
+
+    *geq80.state   = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 80.0f,   1.4f, juce::Decibels::decibelsToGain (g80));
+    *geq240.state  = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 240.0f,  1.4f, juce::Decibels::decibelsToGain (g240));
+    *geq750.state  = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 750.0f,  1.6f, juce::Decibels::decibelsToGain (g750));
+    *geq2200.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 2200.0f, 1.4f, juce::Decibels::decibelsToGain (g2200));
+    *geq6600.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 6600.0f, 1.2f, juce::Decibels::decibelsToGain (g6600));
 
     *cabHighPass.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass (currentSampleRate, 85.0f, 0.707f);
     *cabLowPass.state  = *juce::dsp::IIR::Coefficients<float>::makeLowPass  (currentSampleRate, 5200.0f, 0.85f);
@@ -99,6 +105,7 @@ float StudioPreampAudioProcessor::processTubeStage (float x, float drive, float 
 
 void StudioPreampAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    juce::ignoreUnused (midiMessages);
     juce::ScopedNoDenormals noDenormals;
     updateFilters();
 
@@ -109,11 +116,12 @@ void StudioPreampAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     preMidFilter.process (context);
     preTrebleFilter.process (context);
 
-    float volume    = *apvts.getRawParameterValue ("VOLUME");
-    bool leadMode   = *apvts.getRawParameterValue ("LEAD_MODE") > 0.5f;
-    float leadDrive = *apvts.getRawParameterValue ("LEAD_DRIVE");
-    bool cabSim     = *apvts.getRawParameterValue ("CAB_SIM") > 0.5f;
-    float master    = juce::Decibels::decibelsToGain (*apvts.getRawParameterValue ("MASTER"));
+    float volume    = apvts.getRawParameterValue ("VOLUME")->load();
+    bool leadMode   = apvts.getRawParameterValue ("LEAD_MODE")->load() > 0.5f;
+    float leadDrive = apvts.getRawParameterValue ("LEAD_DRIVE")->load();
+    bool cabSim     = apvts.getRawParameterValue ("CAB_SIM")->load() > 0.5f;
+    float masterDb  = apvts.getRawParameterValue ("MASTER")->load();
+    float master    = juce::Decibels::decibelsToGain (masterDb);
 
     auto oversampledBlock = oversampling.processSamplesUp (block);
 
