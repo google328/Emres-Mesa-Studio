@@ -62,6 +62,7 @@ StudioPreampAudioProcessorEditor::StudioPreampAudioProcessorEditor (StudioPreamp
     setupKnob (midSlider,       midLabel,       "MIDDLE");
     setupKnob (bassSlider,      bassLabel,      "BASS");
     setupKnob (leadDriveSlider, leadDriveLabel, "LEAD DRIVE");
+    setupKnob (cabThumpSlider,  cabThumpLabel,  "CAB THUMP");
     setupKnob (masterSlider,    masterLabel,    "MASTER");
 
     setupFader (geq80Slider,   geq80Label,   "80");
@@ -72,24 +73,43 @@ StudioPreampAudioProcessorEditor::StudioPreampAudioProcessorEditor (StudioPreamp
 
     addAndMakeVisible (leadModeButton);
     addAndMakeVisible (cabSimButton);
+    addAndMakeVisible (loadIRButton);
 
-    volumeAtt    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "VOLUME",     volumeSlider);
-    trebleAtt    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "TREBLE",     trebleSlider);
-    midAtt       = std::make_unique<SliderAttachment> (audioProcessor.apvts, "MID",        midSlider);
-    bassAtt      = std::make_unique<SliderAttachment> (audioProcessor.apvts, "BASS",       bassSlider);
-    leadDriveAtt = std::make_unique<SliderAttachment> (audioProcessor.apvts, "LEAD_DRIVE", leadDriveSlider);
-    masterAtt    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "MASTER",     masterSlider);
+    loadIRButton.onClick = [this]()
+    {
+        fileChooser = std::make_unique<juce::FileChooser> ("Waehle eine Mesa 4x12 EVM12L Impulse Response (.wav)...",
+                                                           juce::File{},
+                                                           "*.wav");
+        auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
+        fileChooser->launchAsync (flags, [this] (const juce::FileChooser& fc)
+        {
+            auto file = fc.getResult();
+            if (file.existsAsFile())
+            {
+                audioProcessor.loadImpulseResponse (file);
+                loadIRButton.setButtonText (file.getFileNameWithoutExtension());
+            }
+        });
+    };
 
-    geq80Att     = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_80",     geq80Slider);
-    geq240Att    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_240",    geq240Slider);
-    geq750Att    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_750",    geq750Slider);
-    geq2200Att   = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_2200",   geq2200Slider);
-    geq6600Att   = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_6600",   geq6600Slider);
+    volumeAtt    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "VOLUME",        volumeSlider);
+    trebleAtt    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "TREBLE",        trebleSlider);
+    midAtt       = std::make_unique<SliderAttachment> (audioProcessor.apvts, "MID",           midSlider);
+    bassAtt      = std::make_unique<SliderAttachment> (audioProcessor.apvts, "BASS",          bassSlider);
+    leadDriveAtt = std::make_unique<SliderAttachment> (audioProcessor.apvts, "LEAD_DRIVE",    leadDriveSlider);
+    cabThumpAtt  = std::make_unique<SliderAttachment> (audioProcessor.apvts, "CAB_RESONANCE", cabThumpSlider);
+    masterAtt    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "MASTER",        masterSlider);
 
-    leadModeAtt  = std::make_unique<ButtonAttachment> (audioProcessor.apvts, "LEAD_MODE",  leadModeButton);
-    cabSimAtt    = std::make_unique<ButtonAttachment> (audioProcessor.apvts, "CAB_SIM",    cabSimButton);
+    geq80Att     = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_80",        geq80Slider);
+    geq240Att    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_240",       geq240Slider);
+    geq750Att    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_750",       geq750Slider);
+    geq2200Att   = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_2200",      geq2200Slider);
+    geq6600Att   = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_6600",      geq6600Slider);
 
-    setSize (860, 260);
+    leadModeAtt  = std::make_unique<ButtonAttachment> (audioProcessor.apvts, "LEAD_MODE",     leadModeButton);
+    cabSimAtt    = std::make_unique<ButtonAttachment> (audioProcessor.apvts, "CAB_SIM",       cabSimButton);
+
+    setSize (940, 260);
 }
 
 StudioPreampAudioProcessorEditor::~StudioPreampAudioProcessorEditor()
@@ -105,7 +125,7 @@ void StudioPreampAudioProcessorEditor::setupKnob (juce::Slider& slider, juce::La
 
     label.setText (text, juce::dontSendNotification);
     label.setJustificationType (juce::Justification::centred);
-    label.setFont (juce::FontOptions (12.0f, juce::Font::bold));
+    label.setFont (juce::FontOptions (11.0f, juce::Font::bold));
     label.setColour (juce::Label::textColourId, juce::Colour (0xffe0e0e0));
     addAndMakeVisible (label);
 }
@@ -138,13 +158,13 @@ void StudioPreampAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (juce::Colours::white);
     g.setFont (juce::FontOptions (20.0f, juce::Font::bold));
-    g.drawText ("BOOGIE STUDIO PREAMP", 42, 16, 320, 28, juce::Justification::left);
+    g.drawText ("BOOGIE STUDIO PREAMP", 42, 16, 360, 28, juce::Justification::left);
 
     g.setColour (juce::Colour (0xff888888));
     g.setFont (juce::FontOptions (11.0f, juce::Font::plain));
-    g.drawText ("CALIBER SERIES / MARK IIC+ CIRCUIT TOPOLOGY", 42, 38, 320, 18, juce::Justification::left);
+    g.drawText ("MARK IIC+ PREAMP + MESA BIG CAB 4x12 EVM12L", 42, 38, 380, 18, juce::Justification::left);
 
-    auto eqBox = juce::Rectangle<int> (565, 22, 245, 216);
+    auto eqBox = juce::Rectangle<int> (645, 22, 245, 216);
     g.setColour (juce::Colour (0xff1d1d1d));
     g.fillRoundedRectangle (eqBox.toFloat(), 4.0f);
     g.setColour (juce::Colour (0xff555555));
@@ -155,41 +175,45 @@ void StudioPreampAudioProcessorEditor::paint (juce::Graphics& g)
     g.drawText ("5-BAND GRAPHIC EQ", eqBox.getX(), eqBox.getY() + 6, eqBox.getWidth(), 18, juce::Justification::centred);
 
     g.setColour (juce::Colour (0xff660000));
-    g.fillEllipse (495, 24, 22, 22);
+    g.fillEllipse (575, 24, 22, 22);
     g.setColour (juce::Colour (0xffff2222));
-    g.fillEllipse (499, 28, 14, 14);
+    g.fillEllipse (579, 28, 14, 14);
     g.setColour (juce::Colour (0xffffaaaa));
-    g.fillEllipse (502, 31, 5, 5);
+    g.fillEllipse (582, 31, 5, 5);
 }
 
 void StudioPreampAudioProcessorEditor::resized()
 {
     int knobY = 85;
-    int knobSize = 72;
-    int labelY = 162;
+    int knobSize = 68;
+    int labelY = 158;
 
-    volumeSlider.setBounds    (45,  knobY, knobSize, knobSize);
-    volumeLabel.setBounds     (45,  labelY, knobSize, 20);
+    volumeSlider.setBounds    (42,  knobY, knobSize, knobSize);
+    volumeLabel.setBounds     (42,  labelY, knobSize, 20);
 
-    trebleSlider.setBounds    (125, knobY, knobSize, knobSize);
-    trebleLabel.setBounds     (125, labelY, knobSize, 20);
+    trebleSlider.setBounds    (118, knobY, knobSize, knobSize);
+    trebleLabel.setBounds     (118, labelY, knobSize, 20);
 
-    midSlider.setBounds       (205, knobY, knobSize, knobSize);
-    midLabel.setBounds        (205, labelY, knobSize, 20);
+    midSlider.setBounds       (194, knobY, knobSize, knobSize);
+    midLabel.setBounds        (194, labelY, knobSize, 20);
 
-    bassSlider.setBounds      (285, knobY, knobSize, knobSize);
-    bassLabel.setBounds       (285, labelY, knobSize, 20);
+    bassSlider.setBounds      (270, knobY, knobSize, knobSize);
+    bassLabel.setBounds       (270, labelY, knobSize, 20);
 
-    leadDriveSlider.setBounds (375, knobY, knobSize, knobSize);
-    leadDriveLabel.setBounds  (375, labelY, knobSize, 20);
+    leadDriveSlider.setBounds (350, knobY, knobSize, knobSize);
+    leadDriveLabel.setBounds  (350, labelY, knobSize, 20);
 
-    masterSlider.setBounds    (460, knobY, knobSize, knobSize);
-    masterLabel.setBounds     (460, labelY, knobSize, 20);
+    cabThumpSlider.setBounds  (440, knobY, knobSize, knobSize);
+    cabThumpLabel.setBounds   (440, labelY, knobSize, 20);
 
-    leadModeButton.setBounds  (45,  200, 140, 26);
-    cabSimButton.setBounds    (205, 200, 140, 26);
+    masterSlider.setBounds    (520, knobY, knobSize, knobSize);
+    masterLabel.setBounds     (520, labelY, knobSize, 20);
 
-    int eqStartX = 580;
+    leadModeButton.setBounds  (42,  200, 130, 26);
+    cabSimButton.setBounds    (185, 200, 130, 26);
+    loadIRButton.setBounds    (330, 200, 140, 26);
+
+    int eqStartX = 660;
     int eqSpacing = 44;
     int faderY = 52;
     int faderH = 155;
@@ -198,14 +222,3 @@ void StudioPreampAudioProcessorEditor::resized()
     geq80Label.setBounds    (eqStartX,                 210,    36, 18);
 
     geq240Slider.setBounds  (eqStartX + eqSpacing,     faderY, 36, faderH);
-    geq240Label.setBounds   (eqStartX + eqSpacing,     210,    36, 18);
-
-    geq750Slider.setBounds  (eqStartX + eqSpacing * 2, faderY, 36, faderH);
-    geq750Label.setBounds   (eqStartX + eqSpacing * 2, 210,    36, 18);
-
-    geq2200Slider.setBounds (eqStartX + eqSpacing * 3, faderY, 36, faderH);
-    geq2200Label.setBounds  (eqStartX + eqSpacing * 3, 210,    36, 18);
-
-    geq6600Slider.setBounds (eqStartX + eqSpacing * 4, faderY, 36, faderH);
-    geq6600Label.setBounds  (eqStartX + eqSpacing * 4, 210,    36, 18);
-}
