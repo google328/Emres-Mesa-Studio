@@ -5,27 +5,63 @@ void BoogieLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int w
                                           float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
                                           juce::Slider&)
 {
-    auto radius = (float) juce::jmin (width / 2, height / 2) - 4.0f;
+    auto radius = (float) juce::jmin (width / 2, height / 2) - 5.0f;
     auto centreX = (float) x + (float) width  * 0.5f;
     auto centreY = (float) y + (float) height * 0.5f;
-    auto rx = centreX - radius;
-    auto ry = centreY - radius;
-    auto rw = radius * 2.0f;
     auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-    g.setColour (juce::Colour (0xff181818));
-    g.fillEllipse (rx, ry, rw, rw);
-    g.setColour (juce::Colour (0xff444444));
-    g.drawEllipse (rx, ry, rw, rw, 2.0f);
+    // 1. Skalenpunkte rund um den Drehregler (0 bis 10 Optik)
+    g.setColour (juce::Colour (0xff777777));
+    for (int i = 0; i <= 10; ++i)
+    {
+        float tickAngle = rotaryStartAngle + (i / 10.0f) * (rotaryEndAngle - rotaryStartAngle);
+        float innerTick = radius + 2.0f;
+        float outerTick = (i % 5 == 0) ? radius + 5.5f : radius + 3.8f;
+        float x1 = centreX + std::sin (tickAngle) * innerTick;
+        float y1 = centreY - std::cos (tickAngle) * innerTick;
+        float x2 = centreX + std::sin (tickAngle) * outerTick;
+        float y2 = centreY - std::cos (tickAngle) * outerTick;
+        g.drawLine (x1, y1, x2, y2, (i % 5 == 0) ? 1.5f : 1.0f);
+    }
 
-    auto innerR = radius * 0.65f;
-    g.setColour (juce::Colour (0xffcccccc));
-    g.fillEllipse (centreX - innerR, centreY - innerR, innerR * 2.0f, innerR * 2.0f);
+    // 2. Weicher Schlagschatten unter dem Knopf
+    g.setColour (juce::Colours::black.withAlpha (0.65f));
+    g.fillEllipse (centreX - radius + 2.0f, centreY - radius + 3.5f, radius * 2.0f, radius * 2.0f);
 
+    // 3. Schwarzer geriffelter Außenkörper
+    juce::ColourGradient outerGrad (juce::Colour (0xff2b2b2b), centreX - radius, centreY - radius,
+                                    juce::Colour (0xff0d0d0d), centreX + radius, centreY + radius, false);
+    g.setGradientFill (outerGrad);
+    g.fillEllipse (centreX - radius, centreY - radius, radius * 2.0f, radius * 2.0f);
+
+    // Feine Riffelung am Rand
+    g.setColour (juce::Colour (0xff151515));
+    for (int i = 0; i < 24; ++i)
+    {
+        float notchAngle = angle + (i * juce::MathConstants<float>::twoPi / 24.0f);
+        float nx1 = centreX + std::sin (notchAngle) * (radius * 0.76f);
+        float ny1 = centreY - std::cos (notchAngle) * (radius * 0.76f);
+        float nx2 = centreX + std::sin (notchAngle) * (radius * 0.98f);
+        float ny2 = centreY - std::cos (notchAngle) * (radius * 0.98f);
+        g.drawLine (nx1, ny1, nx2, ny2, 1.2f);
+    }
+
+    // 4. Gebürstete Silber-Kappe mit Metallic-Lichtverlauf
+    auto capR = radius * 0.68f;
+    juce::ColourGradient metalGrad (juce::Colour (0xfff2f2f2), centreX - capR, centreY - capR,
+                                    juce::Colour (0xff8a8a8a), centreX + capR, centreY + capR, false);
+    g.setGradientFill (metalGrad);
+    g.fillEllipse (centreX - capR, centreY - capR, capR * 2.0f, capR * 2.0f);
+
+    // Glanzrand der Silberkappe
+    g.setColour (juce::Colour (0xffdddddd));
+    g.drawEllipse (centreX - capR, centreY - capR, capR * 2.0f, capR * 2.0f, 1.0f);
+
+    // 5. Weißer Zeigerstrich
     juce::Path p;
-    auto pointerLength = radius * 0.85f;
-    auto pointerThickness = 3.0f;
-    p.addRectangle (-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
+    auto pointerLength = radius * 0.92f;
+    auto pointerThickness = 2.8f;
+    p.addRoundedRectangle (-pointerThickness * 0.5f, -radius + 1.0f, pointerThickness, pointerLength * 0.55f, 1.0f);
     p.applyTransform (juce::AffineTransform::rotation (angle).translated (centreX, centreY));
     g.setColour (juce::Colours::white);
     g.fillPath (p);
@@ -35,21 +71,84 @@ void BoogieLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, int w
                                           float sliderPos, float, float,
                                           const juce::Slider::SliderStyle, juce::Slider&)
 {
-    auto trackWidth = 4.0f;
     auto centreX = (float) x + (float) width * 0.5f;
 
-    g.setColour (juce::Colour (0xff0a0a0a));
-    g.fillRoundedRectangle (centreX - trackWidth * 0.5f, (float) y, trackWidth, (float) height, 2.0f);
+    // Skalenstriche links und rechts vom Fader (+12, +6, 0, -6, -12 dB)
+    for (int i = 0; i <= 4; ++i)
+    {
+        float lineY = (float) y + (i / 4.0f) * (float) height;
+        bool isCenter = (i == 2);
+        g.setColour (isCenter ? juce::Colour (0xff999999) : juce::Colour (0xff4a4a4a));
+        float lineW = isCenter ? 11.0f : 7.0f;
+        g.drawLine (centreX - lineW, lineY, centreX - 4.0f, lineY, isCenter ? 1.5f : 1.0f);
+        g.drawLine (centreX + 4.0f, lineY, centreX + lineW, lineY, isCenter ? 1.5f : 1.0f);
+    }
+
+    // Versenkter Fader-Schlitz
+    auto trackWidth = 4.5f;
+    g.setColour (juce::Colour (0xff050505));
+    g.fillRoundedRectangle (centreX - trackWidth * 0.5f, (float) y - 2.0f, trackWidth, (float) height + 4.0f, 2.0f);
+    g.setColour (juce::Colour (0xff333333));
+    g.drawRoundedRectangle (centreX - trackWidth * 0.5f, (float) y - 2.0f, trackWidth, (float) height + 4.0f, 2.0f, 0.8f);
+
+    // 3D Boogie EQ-Schiebeknopf mit Schatten
+    auto thumbW = 22.0f;
+    auto thumbH = 13.0f;
+    g.setColour (juce::Colours::black.withAlpha (0.7f));
+    g.fillRoundedRectangle (centreX - thumbW * 0.5f + 1.5f, sliderPos - thumbH * 0.5f + 2.0f, thumbW, thumbH, 2.5f);
+
+    juce::ColourGradient thumbGrad (juce::Colour (0xff3c3c3c), centreX, sliderPos - thumbH * 0.5f,
+                                    juce::Colour (0xff181818), centreX, sliderPos + thumbH * 0.5f, false);
+    g.setGradientFill (thumbGrad);
+    g.fillRoundedRectangle (centreX - thumbW * 0.5f, sliderPos - thumbH * 0.5f, thumbW, thumbH, 2.5f);
 
     g.setColour (juce::Colour (0xff666666));
-    g.drawLine ((float) x + 4.0f, (float) y + height * 0.5f, (float) x + width - 4.0f, (float) y + height * 0.5f, 1.0f);
+    g.drawRoundedRectangle (centreX - thumbW * 0.5f, sliderPos - thumbH * 0.5f, thumbW, thumbH, 2.5f, 1.0f);
 
-    auto thumbW = 22.0f;
-    auto thumbH = 12.0f;
-    g.setColour (juce::Colour (0xff252525));
-    g.fillRoundedRectangle (centreX - thumbW * 0.5f, sliderPos - thumbH * 0.5f, thumbW, thumbH, 2.0f);
+    // Leuchtend weiße Mittelkerbe im Schieber
     g.setColour (juce::Colours::white);
-    g.drawLine (centreX - thumbW * 0.4f, sliderPos, centreX + thumbW * 0.4f, sliderPos, 2.0f);
+    g.drawLine (centreX - thumbW * 0.38f, sliderPos, centreX + thumbW * 0.38f, sliderPos, 2.0f);
+}
+
+void BoogieLookAndFeel::drawToggleButton (juce::Graphics& g, juce::ToggleButton& button,
+                                          bool, bool)
+{
+    auto bounds = button.getLocalBounds().toFloat();
+    bool isOn = button.getToggleState();
+
+    // Kleiner Verchromter Kippschalter (Toggle Switch) links
+    float swX = 12.0f;
+    float swY = bounds.getCentreY();
+
+    // Sechskant-Mutter des Kippschalters
+    g.setColour (juce::Colour (0xffaaaaaa));
+    g.fillEllipse (swX - 7.0f, swY - 7.0f, 14.0f, 14.0f);
+    g.setColour (juce::Colour (0xff222222));
+    g.fillEllipse (swX - 4.0f, swY - 4.0f, 8.0f, 8.0f);
+
+    // Metall-Hebel (zeigt nach oben wenn AN, nach unten wenn AUS)
+    float leverEndY = isOn ? (swY - 10.0f) : (swY + 10.0f);
+    juce::ColourGradient chromeGrad (juce::Colours::white, swX - 2.0f, swY,
+                                     juce::Colour (0xff777777), swX + 3.0f, leverEndY, false);
+    g.setGradientFill (chromeGrad);
+    g.drawLine (swX, swY, swX, leverEndY, 4.0f);
+    g.fillEllipse (swX - 2.5f, leverEndY - 2.5f, 5.0f, 5.0f);
+
+    // Status-LED neben dem Schalter
+    float ledX = swX + 16.0f;
+    juce::Colour ledColour = isOn ? juce::Colour (0xffff3333) : juce::Colour (0xff22aa44);
+    if (button.getButtonText().contains ("EVM12L"))
+        ledColour = isOn ? juce::Colour (0xff2299ff) : juce::Colour (0xff333333);
+
+    g.setColour (ledColour.withAlpha (0.35f));
+    g.fillEllipse (ledX - 6.0f, swY - 6.0f, 12.0f, 12.0f);
+    g.setColour (ledColour);
+    g.fillEllipse (ledX - 3.5f, swY - 3.5f, 7.0f, 7.0f);
+
+    // Beschriftung
+    g.setColour (juce::Colour (0xffe0e0e0));
+    g.setFont (juce::FontOptions (11.0f, juce::Font::bold));
+    g.drawText (button.getButtonText(), (int) (ledX + 10.0f), 0, (int) (bounds.getWidth() - ledX - 10.0f), (int) bounds.getHeight(), juce::Justification::centredLeft);
 }
 
 StudioPreampAudioProcessorEditor::StudioPreampAudioProcessorEditor (StudioPreampAudioProcessor& p)
@@ -61,8 +160,8 @@ StudioPreampAudioProcessorEditor::StudioPreampAudioProcessorEditor (StudioPreamp
     setupKnob (trebleSlider,    trebleLabel,    "TREBLE");
     setupKnob (midSlider,       midLabel,       "MIDDLE");
     setupKnob (bassSlider,      bassLabel,      "BASS");
-    setupKnob (leadDriveSlider, leadDriveLabel, "LEAD DRIVE");
-    setupKnob (cabThumpSlider,  cabThumpLabel,  "CAB THUMP");
+    setupKnob (leadDriveSlider, leadDriveLabel, "DRIVE");
+    setupKnob (cabThumpSlider,  cabThumpLabel,  "THUMP");
     setupKnob (masterSlider,    masterLabel,    "MASTER");
 
     setupFader (geq80Slider,   geq80Label,   "80");
@@ -73,6 +172,9 @@ StudioPreampAudioProcessorEditor::StudioPreampAudioProcessorEditor (StudioPreamp
 
     addAndMakeVisible (leadModeButton);
     addAndMakeVisible (cabSimButton);
+
+    loadIRButton.setColour (juce::TextButton::buttonColourId, juce::Colour (0xff262626));
+    loadIRButton.setColour (juce::TextButton::textColourOffId, juce::Colour (0xffe0e0e0));
     addAndMakeVisible (loadIRButton);
 
     loadIRButton.onClick = [this]()
@@ -98,128 +200,3 @@ StudioPreampAudioProcessorEditor::StudioPreampAudioProcessorEditor (StudioPreamp
     bassAtt      = std::make_unique<SliderAttachment> (audioProcessor.apvts, "BASS",          bassSlider);
     leadDriveAtt = std::make_unique<SliderAttachment> (audioProcessor.apvts, "LEAD_DRIVE",    leadDriveSlider);
     cabThumpAtt  = std::make_unique<SliderAttachment> (audioProcessor.apvts, "CAB_RESONANCE", cabThumpSlider);
-    masterAtt    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "MASTER",        masterSlider);
-
-    geq80Att     = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_80",        geq80Slider);
-    geq240Att    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_240",       geq240Slider);
-    geq750Att    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_750",       geq750Slider);
-    geq2200Att   = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_2200",      geq2200Slider);
-    geq6600Att   = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_6600",      geq6600Slider);
-
-    leadModeAtt  = std::make_unique<ButtonAttachment> (audioProcessor.apvts, "LEAD_MODE",     leadModeButton);
-    cabSimAtt    = std::make_unique<ButtonAttachment> (audioProcessor.apvts, "CAB_SIM",       cabSimButton);
-
-    setSize (940, 260);
-}
-
-StudioPreampAudioProcessorEditor::~StudioPreampAudioProcessorEditor()
-{
-    setLookAndFeel (nullptr);
-}
-
-void StudioPreampAudioProcessorEditor::setupKnob (juce::Slider& slider, juce::Label& label, const juce::String& text)
-{
-    slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible (slider);
-
-    label.setText (text, juce::dontSendNotification);
-    label.setJustificationType (juce::Justification::centred);
-    label.setFont (juce::FontOptions (11.0f, juce::Font::bold));
-    label.setColour (juce::Label::textColourId, juce::Colour (0xffe0e0e0));
-    addAndMakeVisible (label);
-}
-
-void StudioPreampAudioProcessorEditor::setupFader (juce::Slider& slider, juce::Label& label, const juce::String& text)
-{
-    slider.setSliderStyle (juce::Slider::LinearVertical);
-    slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible (slider);
-
-    label.setText (text, juce::dontSendNotification);
-    label.setJustificationType (juce::Justification::centred);
-    label.setFont (juce::FontOptions (11.0f, juce::Font::bold));
-    label.setColour (juce::Label::textColourId, juce::Colour (0xffcccccc));
-    addAndMakeVisible (label);
-}
-
-void StudioPreampAudioProcessorEditor::paint (juce::Graphics& g)
-{
-    g.fillAll (juce::Colour (0xff141414));
-
-    g.setColour (juce::Colour (0xff3a3a3a));
-    g.drawRect (getLocalBounds().reduced (6), 2);
-
-    g.setColour (juce::Colour (0xff080808));
-    g.fillEllipse (14, 24, 14, 14);
-    g.fillEllipse (14, getHeight() - 38, 14, 14);
-    g.fillEllipse (getWidth() - 28, 24, 14, 14);
-    g.fillEllipse (getWidth() - 28, getHeight() - 38, 14, 14);
-
-    g.setColour (juce::Colours::white);
-    g.setFont (juce::FontOptions (20.0f, juce::Font::bold));
-    g.drawText ("BOOGIE STUDIO PREAMP", 42, 16, 360, 28, juce::Justification::left);
-
-    g.setColour (juce::Colour (0xff888888));
-    g.setFont (juce::FontOptions (11.0f, juce::Font::plain));
-    g.drawText ("MARK IIC+ PREAMP + MESA BIG CAB 4x12 EVM12L", 42, 38, 380, 18, juce::Justification::left);
-
-    auto eqBox = juce::Rectangle<int> (645, 22, 245, 216);
-    g.setColour (juce::Colour (0xff1d1d1d));
-    g.fillRoundedRectangle (eqBox.toFloat(), 4.0f);
-    g.setColour (juce::Colour (0xff555555));
-    g.drawRoundedRectangle (eqBox.toFloat(), 4.0f, 1.5f);
-
-    g.setColour (juce::Colours::white);
-    g.setFont (juce::FontOptions (12.0f, juce::Font::bold));
-    g.drawText ("5-BAND GRAPHIC EQ", eqBox.getX(), eqBox.getY() + 6, eqBox.getWidth(), 18, juce::Justification::centred);
-
-    g.setColour (juce::Colour (0xff660000));
-    g.fillEllipse (575, 24, 22, 22);
-    g.setColour (juce::Colour (0xffff2222));
-    g.fillEllipse (579, 28, 14, 14);
-    g.setColour (juce::Colour (0xffffaaaa));
-    g.fillEllipse (582, 31, 5, 5);
-}
-
-void StudioPreampAudioProcessorEditor::resized()
-{
-    int knobY = 85;
-    int knobSize = 68;
-    int labelY = 158;
-
-    volumeSlider.setBounds    (42,  knobY, knobSize, knobSize);
-    volumeLabel.setBounds     (42,  labelY, knobSize, 20);
-
-    trebleSlider.setBounds    (118, knobY, knobSize, knobSize);
-    trebleLabel.setBounds     (118, labelY, knobSize, 20);
-
-    midSlider.setBounds       (194, knobY, knobSize, knobSize);
-    midLabel.setBounds        (194, labelY, knobSize, 20);
-
-    bassSlider.setBounds      (270, knobY, knobSize, knobSize);
-    bassLabel.setBounds       (270, labelY, knobSize, 20);
-
-    leadDriveSlider.setBounds (350, knobY, knobSize, knobSize);
-    leadDriveLabel.setBounds  (350, labelY, knobSize, 20);
-
-    cabThumpSlider.setBounds  (440, knobY, knobSize, knobSize);
-    cabThumpLabel.setBounds   (440, labelY, knobSize, 20);
-
-    masterSlider.setBounds    (520, knobY, knobSize, knobSize);
-    masterLabel.setBounds     (520, labelY, knobSize, 20);
-
-    leadModeButton.setBounds  (42,  200, 130, 26);
-    cabSimButton.setBounds    (185, 200, 130, 26);
-    loadIRButton.setBounds    (330, 200, 140, 26);
-
-    int eqStartX = 660;
-    int eqSpacing = 44;
-    int faderY = 52;
-    int faderH = 155;
-
-    geq80Slider.setBounds   (eqStartX,                 faderY, 36, faderH);
-    geq80Label.setBounds    (eqStartX,                 210,    36, 18);
-
-    geq240Slider.setBounds  (eqStartX + eqSpacing,     faderY, 36, faderH);
-}
