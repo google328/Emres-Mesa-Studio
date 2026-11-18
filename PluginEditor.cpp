@@ -310,4 +310,50 @@ void StudioPreampAudioProcessorEditor::resized()
     inputSlider.setBounds     (startX, knobY, knobSize, knobSize);
     inputLabel.setBounds      (startX, labelY, knobSize, 18);
 
-    int preStartX = startX + spacing + 8;
+       int preStartX = startX + spacing + 8;
+    volumeSlider.setBounds    (preStartX,               knobY, knobSize, knobSize);
+    volumeLabel.setBounds     (preStartX,               labelY, knobSize, 18);
+
+    trebleSlider.setBounds    (preStartX + spacing,     knobY, knobSize, knobSize);
+    trebleLabel.setBounds     (preStartX + spacing,     labelY, knobSize, 18);
+
+    midSlider.setBounds       (preStartX + spacing * 2, knobY, knobSize, knobSize);
+    midLabel.setBounds        (preStartX + spacing * 2, labelY, knobSize, 18);
+
+    bassSlider.setBounds      (preStartX + spacing * 3, knobY, knobSize, knobSize);
+    bassLabel.setBounds       (preStartX + spacing * 3, labelY, knobSize, 18);
+
+    leadDriveSlider.setBounds (preStartX + spacing * 4, knobY, knobSize, knobSize);
+    leadDriveLabel.setBounds  (preStartX + spacing * 4, labelY, knobSize, 18);
+
+    int outStartX = preStartX + spacing * 5 + 8;
+    cabThumpSlider.setBounds  (outStartX,               knobY, knobSize, knobSize);
+    cabThumpLabel.setBounds   (outStartX,               labelY, knobSize, 18);
+
+    masterSlider.setBounds    (outStartX + spacing,     knobY, knobSize, knobSize);
+    masterLabel.setBounds     (outStartX + spacing,     labelY, knobSize, 18);
+
+    leadModeButton.setBounds  (30,  195, 145, 28);
+    cabSimButton.setBounds    (185, 195, 140, 28);
+    loadIRButton.setBounds    (340, 195, 185, 26);
+
+    int eqStartX = 588;
+    int eqSpacing = 42;
+    int faderY = 50;
+    int faderH = 158;
+
+    geq80Slider.setBounds   (eqStartX,                 faderY, 34, faderH);
+    geq80Label.setBounds    (eqStartX,                 212,    34, 18);
+
+    geq240Slider.setBounds  (eqStartX + eqSpacing,     faderY, 34, faderH);
+    geq240Label.setBounds   (eqStartX + eqSpacing,     212,    34, 18);
+
+    geq750Slider.setBounds  (eqStartX + eqSpacing * 2, faderY, 34, faderH);
+    geq750Label.setBounds   (eqStartX + eqSpacing * 2, 212,    34, 18);
+
+    geq2200Slider.setBounds (eqStartX + eqSpacing * 3, faderY, 34, faderH);
+    geq2200Label.setBounds  (eqStartX + eqSpacing * 3, 212,    34, 18);
+
+    geq6600Slider.setBounds (eqStartX + eqSpacing * 4, faderY, 34, faderH);
+    geq6600Label.setBounds  (eqStartX + eqSpacing * 4, 212,    34, 18);
+}
