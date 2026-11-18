@@ -6,8 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 include(FetchContent)
 FetchContent_Declare(
     JUCE
-    GIT_REPOSITORY https://github.com
-    GIT_TAG        8.0.4
+    URL https://github.com
 )
 FetchContent_MakeAvailable(JUCE)
 
