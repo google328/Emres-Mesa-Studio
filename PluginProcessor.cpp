@@ -29,7 +29,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout StudioPreampAudioProcessor::
     params.push_back (std::make_unique<juce::AudioParameterFloat> ("GEQ_2200", "2200 Hz", -12.0f, 12.0f,  3.0f));
     params.push_back (std::make_unique<juce::AudioParameterFloat> ("GEQ_6600", "6600 Hz", -12.0f, 12.0f,  5.0f));
 
-    params.push_back (std::make_unique<juce::AudioParameterBool>  ("CAB_SIM", "4x12 Cab Sim", true));
+    // Mesa 4x12 EVM12L Cab Controls
+    params.push_back (std::make_unique<juce::AudioParameterBool>  ("CAB_SIM", "Mesa 4x12 EVM12L", true));
+    params.push_back (std::make_unique<juce::AudioParameterFloat> ("CAB_RESONANCE", "Big Cab Thump", 0.0f, 10.0f, 6.0f));
     params.push_back (std::make_unique<juce::AudioParameterFloat> ("MASTER", "Output Master", -24.0f, 12.0f, 0.0f));
 
     return { params.begin(), params.end() };
@@ -56,13 +58,31 @@ void StudioPreampAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     geq2200.prepare (spec);
     geq6600.prepare (spec);
 
-    cabLowPass.prepare (spec);
-    cabHighPass.prepare (spec);
+    cabSubCut.prepare (spec);
+    cabBigResonance.prepare (spec);
+    evmLowMidPunch.prepare (spec);
+    evmMidFlatness.prepare (spec);
+    evmPresencePeak.prepare (spec);
+    evmConeRollOff.prepare (spec);
+
+    irLoader.prepare (spec);
 
     updateFilters();
 }
 
 void StudioPreampAudioProcessor::releaseResources() {}
+
+void StudioPreampAudioProcessor::loadImpulseResponse (const juce::File& file)
+{
+    if (file.existsAsFile())
+    {
+        irLoader.loadImpulseResponse (file,
+                                      juce::dsp::Convolution::Stereo::yes,
+                                      juce::dsp::Convolution::Trim::yes,
+                                      0);
+        customIRLoaded = true;
+    }
+}
 
 void StudioPreampAudioProcessor::updateFilters()
 {
@@ -86,8 +106,16 @@ void StudioPreampAudioProcessor::updateFilters()
     *geq2200.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 2200.0f, 1.4f, juce::Decibels::decibelsToGain (g2200));
     *geq6600.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 6600.0f, 1.2f, juce::Decibels::decibelsToGain (g6600));
 
-    *cabHighPass.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass (currentSampleRate, 85.0f, 0.707f);
-    *cabLowPass.state  = *juce::dsp::IIR::Coefficients<float>::makeLowPass  (currentSampleRate, 5200.0f, 0.85f);
+    // Mesa Oversized 4x12 + Electro-Voice EVM12L Akustik-Modell
+    float thumpAmount = apvts.getRawParameterValue ("CAB_RESONANCE")->load(); // 0 bis 10
+    float cabResGainDb = 2.0f + (thumpAmount * 0.65f); // +2 dB bis +8.5 dB Gehäuseschub
+
+    *cabSubCut.state       = *juce::dsp::IIR::Coefficients<float>::makeHighPass   (currentSampleRate, 68.0f,   0.85f);
+    *cabBigResonance.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 98.0f,   2.4f, juce::Decibels::decibelsToGain (cabResGainDb));
+    *evmLowMidPunch.state  = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 215.0f,  1.5f, juce::Decibels::decibelsToGain (2.5f));
+    *evmMidFlatness.state  = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 850.0f,  1.2f, juce::Decibels::decibelsToGain (-3.2f));
+    *evmPresencePeak.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (currentSampleRate, 4150.0f, 2.2f, juce::Decibels::decibelsToGain (4.8f));
+    *evmConeRollOff.state  = *juce::dsp::IIR::Coefficients<float>::makeLowPass    (currentSampleRate, 6100.0f, 1.1f);
 }
 
 float StudioPreampAudioProcessor::processTubeStage (float x, float drive, float asymmetry)
@@ -153,8 +181,20 @@ void StudioPreampAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     if (cabSim)
     {
-        cabHighPass.process (context);
-        cabLowPass.process (context);
+        if (customIRLoaded)
+        {
+            irLoader.process (context);
+        }
+        else
+        {
+            // Internes Mesa Big Cab 4x12 EVM12L Modeling
+            cabSubCut.process (context);
+            cabBigResonance.process (context);
+            evmLowMidPunch.process (context);
+            evmMidFlatness.process (context);
+            evmPresencePeak.process (context);
+            evmConeRollOff.process (context);
+        }
     }
 
     buffer.applyGain (master);
