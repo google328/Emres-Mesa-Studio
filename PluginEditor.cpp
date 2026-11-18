@@ -192,3 +192,122 @@ StudioPreampAudioProcessorEditor::StudioPreampAudioProcessorEditor (StudioPreamp
     geq240Att    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_240",       geq240Slider);
     geq750Att    = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_750",       geq750Slider);
     geq2200Att   = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_2200",      geq2200Slider);
+    geq6600Att   = std::make_unique<SliderAttachment> (audioProcessor.apvts, "GEQ_6600",      geq6600Slider);
+
+    leadModeAtt  = std::make_unique<ButtonAttachment> (audioProcessor.apvts, "LEAD_MODE",     leadModeButton);
+    cabSimAtt    = std::make_unique<ButtonAttachment> (audioProcessor.apvts, "CAB_SIM",       cabSimButton);
+
+    setSize (840, 260);
+    setResizable (true, true);
+}
+
+StudioPreampAudioProcessorEditor::~StudioPreampAudioProcessorEditor()
+{
+    setLookAndFeel (nullptr);
+}
+
+void StudioPreampAudioProcessorEditor::setupKnob (juce::Slider& slider, juce::Label& label, const juce::String& text)
+{
+    slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+    slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+    addAndMakeVisible (slider);
+
+    label.setText (text, juce::dontSendNotification);
+    label.setJustificationType (juce::Justification::centred);
+    label.setFont (juce::FontOptions (10.5f, juce::Font::bold));
+    label.setColour (juce::Label::textColourId, juce::Colour (0xffdddddd));
+    addAndMakeVisible (label);
+}
+
+void StudioPreampAudioProcessorEditor::setupFader (juce::Slider& slider, juce::Label& label, const juce::String& text)
+{
+    slider.setSliderStyle (juce::Slider::LinearVertical);
+    slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+    addAndMakeVisible (slider);
+
+    label.setText (text, juce::dontSendNotification);
+    label.setJustificationType (juce::Justification::centred);
+    label.setFont (juce::FontOptions (11.0f, juce::Font::bold));
+    label.setColour (juce::Label::textColourId, juce::Colour (0xffcccccc));
+    addAndMakeVisible (label);
+}
+
+void StudioPreampAudioProcessorEditor::paint (juce::Graphics& g)
+{
+    juce::ColourGradient chassisGrad (juce::Colour (0xff1c1c1c), 0.0f, 0.0f,
+                                      juce::Colour (0xff0f0f0f), 0.0f, (float) getHeight(), false);
+    g.setGradientFill (chassisGrad);
+    g.fillAll();
+
+    g.setColour (juce::Colours::white.withAlpha (0.015f));
+    for (int y = 0; y < getHeight(); y += 2)
+        g.drawHorizontalLine (y, 0.0f, (float) getWidth());
+
+    g.setColour (juce::Colour (0xff484848));
+    g.drawRect (getLocalBounds().reduced (5), 1.5f);
+    g.setColour (juce::Colour (0xff262626));
+    g.drawRect (getLocalBounds().reduced (8), 1.0f);
+
+    auto drawScrew = [&g] (float sx, float sy)
+    {
+        g.setColour (juce::Colour (0xff080808));
+        g.fillEllipse (sx - 1.0f, sy - 1.0f, 14.0f, 14.0f);
+        juce::ColourGradient screwGrad (juce::Colour (0xff555555), sx, sy,
+                                        juce::Colour (0xff1c1c1c), sx + 12.0f, sy + 12.0f, false);
+        g.setGradientFill (screwGrad);
+        g.fillEllipse (sx, sy, 12.0f, 12.0f);
+        g.setColour (juce::Colour (0xff0a0a0a));
+        g.drawLine (sx + 3.0f, sy + 6.0f, sx + 9.0f, sy + 6.0f, 1.5f);
+        g.drawLine (sx + 6.0f, sy + 3.0f, sx + 6.0f, sy + 9.0f, 1.5f);
+    };
+
+    drawScrew (12.0f, 20.0f);
+    drawScrew (12.0f, (float) getHeight() - 32.0f);
+    drawScrew ((float) getWidth() - 24.0f, 20.0f);
+    drawScrew ((float) getWidth() - 24.0f, (float) getHeight() - 32.0f);
+
+    g.setColour (juce::Colours::white);
+    g.setFont (juce::FontOptions (19.0f, juce::Font::bold));
+    g.drawText ("BOOGIE STUDIO PREAMP", 34, 14, 340, 26, juce::Justification::left);
+
+    g.setColour (juce::Colour (0xff999999));
+    g.setFont (juce::FontOptions (10.5f, juce::Font::bold));
+    g.drawText ("MARK IIC+ PREAMP  //  MESA BIG CAB 4x12 EVM12L", 34, 36, 380, 16, juce::Justification::left);
+
+    g.setColour (juce::Colour (0xff333333));
+    g.drawVerticalLine (94, 78.0f, 165.0f);
+    g.drawVerticalLine (418, 78.0f, 165.0f);
+
+    auto eqBox = juce::Rectangle<int> (575, 20, 230, 220);
+    g.setColour (juce::Colour (0xff161616));
+    g.fillRoundedRectangle (eqBox.toFloat(), 5.0f);
+    g.setColour (juce::Colour (0xff4d4d4d));
+    g.drawRoundedRectangle (eqBox.toFloat(), 5.0f, 1.5f);
+
+    g.setColour (juce::Colours::white);
+    g.setFont (juce::FontOptions (11.5f, juce::Font::bold));
+    g.drawText ("5-BAND GRAPHIC EQ", eqBox.getX(), eqBox.getY() + 6, eqBox.getWidth(), 18, juce::Justification::centred);
+
+    float jx = 525.0f, jy = 22.0f;
+    g.setColour (juce::Colour (0xffff1111).withAlpha (0.25f));
+    g.fillEllipse (jx - 5.0f, jy - 5.0f, 30.0f, 30.0f);
+    g.setColour (juce::Colour (0xff888888));
+    g.drawEllipse (jx - 1.0f, jy - 1.0f, 22.0f, 22.0f, 1.5f);
+    juce::ColourGradient jewelGrad (juce::Colour (0xffff6666), jx + 5.0f, jy + 5.0f,
+                                    juce::Colour (0xff770000), jx + 18.0f, jy + 18.0f, true);
+    g.setGradientFill (jewelGrad);
+    g.fillEllipse (jx, jy, 20.0f, 20.0f);
+}
+
+void StudioPreampAudioProcessorEditor::resized()
+{
+    int knobY = 82;
+    int knobSize = 54;
+    int labelY = 140;
+    int startX = 30;
+    int spacing = 62;
+
+    inputSlider.setBounds     (startX, knobY, knobSize, knobSize);
+    inputLabel.setBounds      (startX, labelY, knobSize, 18);
+
+    int preStartX = startX + spacing + 8;
