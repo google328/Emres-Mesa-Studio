@@ -29,6 +29,10 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    // Lädt eigene .wav Impulse Responses in die Boxen-Simulation
+    void loadImpulseResponse (const juce::File& file);
+    bool isCustomIRLoaded() const { return customIRLoaded; }
+
     juce::AudioProcessorValueTreeState apvts;
 
 private:
@@ -39,10 +43,21 @@ private:
     using IIRFilter = juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>>;
     IIRFilter preBassFilter, preMidFilter, preTrebleFilter;
     IIRFilter geq80, geq240, geq750, geq2200, geq6600;
-    IIRFilter cabLowPass, cabHighPass;
+
+    // Mesa Oversized 4x12 EVM12L Speaker & Cabinet Modeling Netzwerk
+    IIRFilter cabSubCut;         // Sub-Bass Schutz unterhalb 65 Hz
+    IIRFilter cabBigResonance;   // Typische Gehäuseresonanz des großen Mesa-Cabinets (~98 Hz)
+    IIRFilter evmLowMidPunch;    // Straffer Tiefmitten-Druck des EVM12L (~210 Hz)
+    IIRFilter evmMidFlatness;    // Kontrollierte Mitten-Absenkung (~850 Hz)
+    IIRFilter evmPresencePeak;   // Charakteristischer EVM12L Aluminium-Dustcap Peak (~4200 Hz)
+    IIRFilter evmConeRollOff;    // Steiler Hochton-Abfall des 12-Zoll-Speakers (~6200 Hz)
+
+    // Optionaler Faltungshall (Convolution) für eigene IR-Dateien
+    juce::dsp::Convolution irLoader;
+    bool customIRLoaded = false;
 
     void updateFilters();
-    float processTubeStage(float sample, float drive, float asymmetry);
+    float processTubeStage (float sample, float drive, float asymmetry);
 
     double currentSampleRate = 44100.0;
 
