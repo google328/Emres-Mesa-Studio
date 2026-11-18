@@ -15,10 +15,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout StudioPreampAudioProcessor::
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
-    // Input Sensitivity (-24 dB bis +24 dB)
     params.push_back (std::make_unique<juce::AudioParameterFloat> ("INPUT_GAIN", "Input Sensitivity", -24.0f, 24.0f, 0.0f));
 
-    // Preamp Controls
     params.push_back (std::make_unique<juce::AudioParameterFloat> ("VOLUME", "Volume (Clean Gain)", 0.1f, 10.0f, 5.0f));
     params.push_back (std::make_unique<juce::AudioParameterBool>  ("LEAD_MODE", "Lead Channel", true));
     params.push_back (std::make_unique<juce::AudioParameterFloat> ("LEAD_DRIVE", "Lead Drive", 0.0f, 10.0f, 6.5f));
@@ -33,7 +31,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout StudioPreampAudioProcessor::
     params.push_back (std::make_unique<juce::AudioParameterFloat> ("GEQ_2200", "2200 Hz", -12.0f, 12.0f,  3.0f));
     params.push_back (std::make_unique<juce::AudioParameterFloat> ("GEQ_6600", "6600 Hz", -12.0f, 12.0f,  5.0f));
 
-    // Mesa 4x12 EVM12L Cab Controls
     params.push_back (std::make_unique<juce::AudioParameterBool>  ("CAB_SIM", "Mesa 4x12 EVM12L", true));
     params.push_back (std::make_unique<juce::AudioParameterFloat> ("CAB_RESONANCE", "Big Cab Thump", 0.0f, 10.0f, 6.0f));
     params.push_back (std::make_unique<juce::AudioParameterFloat> ("MASTER", "Output Master", -24.0f, 12.0f, 0.0f));
@@ -140,7 +137,6 @@ void StudioPreampAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     juce::ScopedNoDenormals noDenormals;
     updateFilters();
 
-    // 0. Eingangsempfindlichkeit (Input Sensitivity) ganz vorne anwenden
     float inputDb   = apvts.getRawParameterValue ("INPUT_GAIN")->load();
     float inputGain = juce::Decibels::decibelsToGain (inputDb);
     buffer.applyGain (inputGain);
@@ -223,3 +219,10 @@ void StudioPreampAudioProcessor::setStateInformation (const void* data, int size
 {
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
     if (xmlState != nullptr && xmlState->hasTagName (apvts.state.getType()))
+        apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
+}
+
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+{
+    return new StudioPreampAudioProcessor();
+}
