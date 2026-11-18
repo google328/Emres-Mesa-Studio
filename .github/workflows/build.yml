@@ -1,0 +1,29 @@
+name: Build Boogie Studio Preamp
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Plugin (VST3 & Standalone)
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Upload Finished Plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: BoogieStudioPreamp-${{ matrix.os }}
+          path: build/BoogieStudioPreamp_artefacts/Release/
