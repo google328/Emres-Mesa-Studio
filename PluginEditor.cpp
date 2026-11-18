@@ -222,3 +222,4 @@ void StudioPreampAudioProcessorEditor::resized()
     geq80Label.setBounds    (eqStartX,                 210,    36, 18);
 
     geq240Slider.setBounds  (eqStartX + eqSpacing,     faderY, 36, faderH);
+}
